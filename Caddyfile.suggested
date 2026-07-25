@@ -1,0 +1,26 @@
+# CortexBuild Pro — Caddy config for the Hostinger VPS
+# Fixes: dist/* was served no-cache (re-downloaded every visit) and uncompressed.
+cortexbuildpro.com, www.cortexbuildpro.com {
+	root * /var/www/cortexx
+	encode zstd gzip
+	file_server
+
+	# Precompiled app modules are content-stable per release — cache hard.
+	# sw.js CACHE bump + network-first HTML shell handle invalidation.
+	@dist path /dist/*
+	header @dist Cache-Control "public, max-age=2592000, immutable"
+
+	@icons path *.png *.svg *.ico
+	header @icons Cache-Control "public, max-age=604800, immutable"
+
+	# Never cache the worker or the HTML shell — they are the update channel.
+	@shell path /sw.js /index.html /Cortexx.html /Cortexx_Marketing.html /
+	header @shell Cache-Control "no-cache, must-revalidate"
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}
