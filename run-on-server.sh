@@ -29,9 +29,9 @@ chown www-data:www-data "$ROOT/dist/screens-phase120.js" "$ROOT/lib/screens-phas
 
 echo "▶ Health checks (live)…"
 sleep 1
-curl -fsS https://cortexbuildpro.com/dist/screens-phase120.js >/dev/null && echo "  ✓ phase120 served"
-curl -fsS https://cortexbuildpro.com/sw.js | grep -q v3-1-017 && echo "  ✓ sw v3-1-017"
-curl -fsS https://cortexbuildpro.com/Cortexx.html | grep -q screens-phase120 && echo "  ✓ shell patched"
+curl -fsS https://cortexbuildpro.com/dist/screens-phase120.js | grep -q __cortexxGuarded && echo "  ✓ phase120 served" || echo "  ✗ phase120 NOT served (catch-all page returned)"
+curl -fsS https://cortexbuildpro.com/sw.js | grep -q v3-1-017 && echo "  ✓ sw v3-1-017" || echo "  ✗ sw still old"
+curl -fsS https://cortexbuildpro.com/Cortexx.html | grep -q screens-phase120 && echo "  ✓ shell patched" || echo "  ✗ shell still old"
 
 echo ""
 echo "▶ Optional Caddy perf fix (dist/ is currently no-cache + uncompressed):"
