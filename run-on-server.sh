@@ -4,13 +4,40 @@
 # redesigned marketing page. Additive; backs up what it replaces.
 set -euo pipefail
 BASE="${GIST_BASE:?GIST_BASE not set}"
-ROOT=""
-for r in /var/www/cortexx /var/www/html /srv/cortexx /var/www/cortexbuildpro.com; do
-  [ -f "$r/Cortexx.html" ] && ROOT="$r" && break
-done
-[ -z "$ROOT" ] && ROOT=$(dirname "$(grep -rl --include=Cortexx.html . /var/www /srv 2>/dev/null | head -1)") 
-[ -z "$ROOT" ] && { echo "✗ Could not find web root (no Cortexx.html under /var/www or /srv)"; exit 1; }
+
+# Locate the web root: explicit WEB_ROOT wins; otherwise search the filesystem.
+ROOT="${WEB_ROOT:-}"
+if [ -z "$ROOT" ]; then
+  for r in /var/www/cortexx /var/www/html /srv/cortexx /var/www/cortexbuildpro.com /usr/share/caddy; do
+    [ -f "$r/Cortexx.html" ] && ROOT="$r" && break
+  done
+fi
+if [ -z "$ROOT" ]; then
+  HIT=$(find / -name Cortexx.html \
+        -not -path "/root/*" -not -path "*/.backup/*" -not -path "/proc/*" -not -path "/sys/*" \
+        2>/dev/null | head -1)
+  [ -n "$HIT" ] && ROOT=$(dirname "$HIT")
+fi
+if [ -z "$ROOT" ] || [ "$ROOT" = "." ]; then
+  echo "✗ Could not find the web root on this filesystem."
+  echo ""
+  echo "── Diagnostics (paste this output back) ──"
+  echo "• Caddy config roots/proxies:"
+  grep -rEn "root |reverse_proxy|file_server" /etc/caddy/ 2>/dev/null | head -20
+  ls /etc/caddy 2>/dev/null
+  echo "• Containers:"
+  docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Ports}}" 2>/dev/null || echo "  (docker not present)"
+  echo "• Caddy process:"
+  ps aux | grep -i [c]addy | head -3
+  exit 1
+fi
+[ -f "$ROOT/Cortexx.html" ] || { echo "✗ $ROOT has no Cortexx.html — refusing to deploy there."; exit 1; }
 echo "▶ Web root: $ROOT"
+
+# Clean up the earlier mis-deploy into /root (harmless files, wrong place)
+rm -rf /root/dist/screens-phase120.js /root/lib/screens-phase120.js 2>/dev/null
+rm -f /root/Cortexx.html /root/sw.js /root/Cortexx_Marketing.html 2>/dev/null
+rmdir /root/dist /root/lib 2>/dev/null || true
 
 STAMP=$(date +%Y%m%d-%H%M%S)
 mkdir -p "$ROOT/.backup/$STAMP" "$ROOT/dist" "$ROOT/lib"
